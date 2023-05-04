@@ -1,11 +1,11 @@
 {
   "profiles": {
     "NugetUtility": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "-i C:\\Users\\u24l53\\source\\repos\\EmaServices -u -f C:\\Users\\u24l53\\source\\repos\\ -o --outfile services.txt --resolve-buildprops-versions --minimalistic"
     },
     "WSL": {
       "commandName": "WSL2",
-      "environmentVariables": {},
       "distributionName": ""
     }
   }

@@ -68,6 +68,9 @@ namespace NugetUtility
         [Option('m', "md", Default = false, HelpText = "Saves the licenses list to a markdown file (licenses.md)")]
         public bool MarkDownOutput { get; set; }
 
+        [Option("minimalistic", Default = false, HelpText = "Saves the license list as a minimalistic text version")]
+        public bool MinimalisticTextoutput { get; set; }
+
         [Option('e', "export-license-texts", Default = false, HelpText = "Exports the raw license texts")]
         public bool ExportLicenseTexts { get; set; }
 
@@ -82,6 +85,9 @@ namespace NugetUtility
 
         [Option("use-project-assets-json", Default = false, HelpText = "Use the resolved project.assets.json file for each project as the source of package information. Requires the -t option. Requires `nuget restore` or `dotnet restore` to be run first.")]
         public bool UseProjectAssetsJson { get; set; }
+
+        [Option("resolve-buildprops-versions", Default = false, HelpText = "Use the Directory.Build.Props file for each project to resolve centrally defined version variables, e.g. $(NugetVersion).")]
+        public bool ResolveBuildPropsDefinedVersions { get; set; }
 
         [Option("timeout", Default = 10, HelpText = "Set HttpClient timeout in seconds.")]
         public int Timeout { get; set; }

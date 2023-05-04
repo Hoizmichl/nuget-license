@@ -88,6 +88,10 @@ namespace NugetUtility
                 {
                     methods.SaveAsMarkdown(mappedLibraryInfo);
                 }
+                else if (options.MinimalisticTextoutput)
+                {
+                    methods.SaveAsMinimalisticTextFile(mappedLibraryInfo);
+                }
                 else
                 {
                     methods.SaveAsTextFile(mappedLibraryInfo);

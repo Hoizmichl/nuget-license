@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -76,11 +77,11 @@ namespace NugetUtility
                 }
                 else
                 {
-                _httpClient = new HttpClient(httpClientHandler)
-                {
-                    BaseAddress = new Uri(nugetUrl),
-                    Timeout = TimeSpan.FromSeconds(packageOptions.Timeout)
-                };
+                    _httpClient = new HttpClient(httpClientHandler)
+                    {
+                        BaseAddress = new Uri(nugetUrl),
+                        Timeout = TimeSpan.FromSeconds(packageOptions.Timeout)
+                    };
                 }
             }
 
@@ -355,11 +356,32 @@ namespace NugetUtility
             var projectFiles = await GetValidProjects(_packageOptions.ProjectDirectory);
             foreach (var projectFile in projectFiles)
             {
-                var references = this.GetProjectReferences(projectFile);
-                var referencedPackages = references.Select((package) =>
+                var referenceStrings = this.GetProjectReferences(projectFile);
+
+                var references = referenceStrings.Select(package =>
                 {
                     var split = package.Split(',', 2);
-                    return new PackageNameAndVersion { Name = split[0], Version = split[1] };
+                    return (Id: split[0], Version: split[1]);
+                }).ToList();
+
+                if (_packageOptions.ResolveBuildPropsDefinedVersions)
+                {
+                    var regex = new Regex(BuildPropsVersionPattern);
+
+                    if (references.Any(s => regex.Match(s.Version).Success))
+                    {
+                        var buildPropsFile = GetBuildPropsFile(Path.GetDirectoryName(projectFile));
+                        var buildProps = XElement.Parse(await File.ReadAllTextAsync(buildPropsFile));
+                        var propertyGoups = buildProps.Elements().Where(e => e.Name == "PropertyGroup");
+
+                        var resolvedReferences = GetReferencesWithResolvedBuildPropsVersions(references, propertyGoups);
+                        references = resolvedReferences.ToList();
+                    }
+                }
+
+                var referencedPackages = references.Select(reference =>
+                {
+                    return new PackageNameAndVersion { Name = reference.Id, Version = reference.Version };
                 });
                 WriteOutput(Environment.NewLine + "Project:" + projectFile + Environment.NewLine, logLevel: LogLevel.Information);
                 var currentProjectLicenses = await this.GetNugetInformationAsync(projectFile, referencedPackages);
@@ -367,6 +389,50 @@ namespace NugetUtility
             }
 
             return licenses;
+        }
+
+        private const string BuildPropsVersionPattern = "\\$\\(.+\\)";
+
+        private static IEnumerable<(string Id, string Version)> GetReferencesWithResolvedBuildPropsVersions(IEnumerable<(string Id, string Version)> referencesSplit, IEnumerable<XElement> propertyGoups)
+        {
+            var newReferenceSplit = new List<(string Id, string Version)>();
+
+            foreach (var reference in referencesSplit)
+            {
+                var resolvedVersion = reference.Version;
+
+                if (new Regex(BuildPropsVersionPattern).Match(reference.Version).Success)
+                {
+                    // Get variable like $(NugetVersion) from Directory.Build.props
+                    var versionEntry = reference.Version.Replace("$(", "").Replace(")", "");
+                    var versionPropertyGroup = propertyGoups.Where(e => e.Elements().Any(eInner => eInner.Name == versionEntry));
+                    var versionElement = versionPropertyGroup.Elements().FirstOrDefault(e => e.Name == versionEntry);
+
+                    if (!string.IsNullOrWhiteSpace(versionElement?.Value))
+                        resolvedVersion = versionElement.Value;
+                }
+
+                newReferenceSplit.Add(reference with { Version = resolvedVersion });
+            }
+
+            return newReferenceSplit;
+        }
+
+        public string GetBuildPropsFile(string directory)
+        {
+            // Check if the "Directory.Build.props" file exists in the directory
+            var buildPropsFile = Path.Combine(directory, "Directory.Build.props");
+            var exists = File.Exists(buildPropsFile);
+
+            if (exists)
+                return buildPropsFile;
+
+            if (directory.Length <= 3)
+                throw new InvalidOperationException("Directory not found"); // avoid infinite loop at root directory
+
+            // get the parent directory
+            var dirParent = Directory.GetParent(directory).FullName;
+            return GetBuildPropsFile(dirParent); // recursive call
         }
 
         public string[] GetProjectExtensions(bool withWildcard = false) =>
@@ -520,7 +586,7 @@ namespace NugetUtility
                 }
             };
         }
-        
+
         public IValidationResult<KeyValuePair<string, Package>> ValidateLicenses(Dictionary<string, PackageList> projectPackages)
         {
             if (_packageOptions.AllowedLicenseType.Count == 0)
@@ -529,7 +595,7 @@ namespace NugetUtility
             }
 
             WriteOutput(() => $"Starting {nameof(ValidateLicenses)}...", logLevel: LogLevel.Verbose);
-            
+
             var invalidPackages = projectPackages
                 .SelectMany(kvp => kvp.Value.Select(p => new KeyValuePair<string, Package>(kvp.Key, p.Value)))
                 .Where(p => !_packageOptions.AllowedLicenseType.Any(allowed =>
@@ -583,7 +649,7 @@ namespace NugetUtility
             }
 
             WriteOutput(() => $"Starting {nameof(ValidateAllowedLicenses)}...", logLevel: LogLevel.Verbose);
-            
+
             var invalidPackages = projectPackages
                 .Where(p => !_packageOptions.AllowedLicenseType.Any(allowed =>
                 {
@@ -619,7 +685,7 @@ namespace NugetUtility
             var invalidPackages = projectPackages
                 .Where(LicenseIsForbidden)
                 .ToList();
-            
+
             return new ValidationResult<LibraryInfo> { IsValid = invalidPackages.Count == 0, InvalidPackages = invalidPackages };
 
             bool LicenseIsForbidden(LibraryInfo info)
@@ -1068,7 +1134,7 @@ namespace NugetUtility
                     catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
                     {
                         WriteOutput($"{ex.GetType().Name} during download of license url {info.LicenseUrl} exception {ex.Message}", logLevel: LogLevel.Verbose);
-                         break;
+                        break;
                     }
                 } while (true);
             }
@@ -1193,6 +1259,53 @@ namespace NugetUtility
                     sb.AppendLine();
                 }
                 sb.AppendLine();
+            }
+
+            File.WriteAllText(GetOutputFilename("licenses.txt"), sb.ToString());
+        }
+
+        public void SaveAsMinimalisticTextFile(List<LibraryInfo> libraries)
+        {
+            if (!libraries.Any() || !_packageOptions.TextOutput) { return; }
+            StringBuilder sb = new StringBuilder(256);
+
+            sb.Append("This product bundles the following components under the described licenses:");
+            sb.AppendLine();
+
+            foreach (var lib in libraries)
+            {
+                sb.AppendLine();
+
+                sb.Append(new string('-', 100));
+                sb.AppendLine();
+                sb.AppendLine();
+
+                sb.Append(lib.PackageName);
+                sb.AppendLine();
+                sb.AppendLine();
+
+                sb.Append("Version: ");
+                sb.Append(lib.PackageVersion);
+                sb.AppendLine();
+
+                sb.Append("Project: ");
+                sb.Append(lib.PackageUrl);
+                sb.AppendLine();
+
+                sb.Append("License: ");
+                sb.Append(lib.LicenseUrl);
+                sb.AppendLine();
+
+                sb.Append("License type: ");
+                sb.Append(lib.LicenseType);
+                sb.AppendLine();
+
+                if (_packageOptions.IncludeProjectFile)
+                {
+                    sb.Append("Project file: ");
+                    sb.Append(lib.Projects);
+                    sb.AppendLine();
+                }
             }
 
             File.WriteAllText(GetOutputFilename("licenses.txt"), sb.ToString());
