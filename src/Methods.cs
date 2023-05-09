@@ -1352,21 +1352,34 @@ namespace NugetUtility
                 sb.Append(lib.PackageVersion);
                 sb.AppendLine();
 
-                sb.Append("Project: ");
-                sb.Append(lib.PackageUrl);
-                sb.AppendLine();
+                if (!string.IsNullOrWhiteSpace(lib.PackageUrl))
+                {
+                    sb.Append("Project: ");
+                    sb.Append(lib.PackageUrl);
+                    sb.AppendLine();
 
-                sb.Append("Nuget: ");
-                sb.Append(lib.SourceUrl);
-                sb.AppendLine();
+                }
 
-                sb.Append("License: ");
-                sb.Append(lib.LicenseUrl);
-                sb.AppendLine();
+                if (!string.IsNullOrWhiteSpace(lib.SourceUrl))
+                {
+                    sb.Append("Nuget: ");
+                    sb.Append(lib.SourceUrl);
+                    sb.AppendLine();
+                }
 
-                sb.Append("License type: ");
-                sb.Append(lib.LicenseType);
-                sb.AppendLine();
+                if (!string.IsNullOrWhiteSpace(lib.LicenseUrl))
+                {
+                    sb.Append("License: ");
+                    sb.Append(lib.LicenseUrl);
+                    sb.AppendLine();
+                }
+
+                if (!string.IsNullOrWhiteSpace(lib.SourceUrl))
+                {
+                    sb.Append("License type: ");
+                    sb.Append(lib.LicenseType);
+                    sb.AppendLine();
+                }
 
                 if (_packageOptions.IncludeProjectFile)
                 {
