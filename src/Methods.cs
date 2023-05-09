@@ -1374,7 +1374,7 @@ namespace NugetUtility
                     sb.AppendLine();
                 }
 
-                if (!string.IsNullOrWhiteSpace(lib.SourceUrl))
+                if (!string.IsNullOrWhiteSpace(lib.LicenseType))
                 {
                     sb.Append("License type: ");
                     sb.Append(lib.LicenseType);
