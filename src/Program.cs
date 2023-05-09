@@ -1,6 +1,7 @@
 ﻿using CommandLine;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -72,6 +73,11 @@ namespace NugetUtility
                 }
 
                 mappedLibraryInfo = methods.HandleDeprecateMSFTLicense(mappedLibraryInfo);
+
+                if (File.Exists(options.UrlMappingOption))
+                {
+                    mappedLibraryInfo = methods.ApplyUrlMappings(mappedLibraryInfo);
+                }
 
                 if (options.Print == true)
                 {

@@ -1,0 +1,82 @@
+{
+    "UrlPatterns": [
+        {
+            "Name": "GitProject",
+            "Pattern": "https://github.com/#space/#repo"
+        },
+        {
+            "Name": "NugetProject",
+            "Pattern": "https://www.nuget.org/packages/#id"
+        },
+        {
+            "Name": "NugetPackage",
+            "Pattern": "https://www.nuget.org/packages/#id/#version"
+        },
+        {
+            "Name": "LicenseViaGitTag",
+            "Pattern": "https://github.com/#space/#repo/blob/#version/#licensefile"
+        },
+        {
+            "Name": "LicenseViaGitTagV",
+            "Pattern": "https://github.com/#space/#repo/blob/v#version/#licensefile"
+        },
+        {
+            "Name": "LicenseInNuget",
+            "Pattern": "https://www.nuget.org/packages/#id/#version (License file in nuget package)"
+        }
+    ],
+    "UrlMappings": [
+        {
+            "MatchId": "ClosedXML",
+            "MatchVersion": "",
+            "Space": "ClosedXML",
+            "Repository": "ClosedXML",
+            "LicenseFile": "LICENSE",
+
+            "PackageName": "",
+            "LicenseType": "",
+            "ProjectUrl": "",
+            "SourceUrl": "NugetPackage",
+            "LicenseUrl": "LicenseViaGitTag"
+        },
+        {
+            "MatchId": "Costura.Fody",
+            "MatchVersion": "",
+            "Space": "Fody",
+            "Repository": "Costura",
+            "LicenseFile": "LICENSE",
+
+            "PackageName": "",
+            "LicenseType": "",
+            "ProjectUrl": "",
+            "SourceUrl": "NugetPackage",
+            "LicenseUrl": "LicenseViaGitTag"
+        },
+        {
+            "MatchId": "Costura.Fody",
+            "MatchVersion": "4.0.0",
+            "Space": "",
+            "Repository": "",
+            "LicenseFile": "",
+
+            "PackageName": "",
+            "LicenseType": "",
+            "ProjectUrl": "",
+            "SourceUrl": "NugetPackage",
+            "LicenseUrl": ""
+        },
+        {
+            "MatchId": "Microsoft.Extensions.*",
+            "MatchVersion": "",
+            "Space": "dotnet",
+            "Repository": "core",
+            "LicenseFile": "LICENSE.TXT",
+
+            "PackageName": "",
+            "LicenseType": "",
+            "ProjectUrl": "GitProject",
+            "SourceUrl": "NugetPackage",
+            "LicenseUrl": "LicenseViaGitTagV"
+        }
+    ]
+}

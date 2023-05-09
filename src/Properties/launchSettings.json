@@ -2,7 +2,7 @@
   "profiles": {
     "NugetUtility": {
       "commandName": "Project",
-      "commandLineArgs": "-i C:\\Users\\u24l53\\source\\repos\\EmaServices -u -f C:\\Users\\u24l53\\source\\repos\\ -o --outfile services.txt --resolve-buildprops-versions --minimalistic"
+      "commandLineArgs": "-i C:\\Users\\u24l53\\source\\repos\\EmaServices -u -f C:\\Users\\u24l53\\source\\repos\\ -o --outfile EmaServices.txt --resolve-buildprops-versions --minimalistic --projects-filter C:\\Users\\u24l53\\source\\repos\\PowerShellTools\\Scripts\\PackageLicenses\\ProjectFilter_EmaServices.json --packages-filter C:\\Users\\u24l53\\source\\repos\\PowerShellTools\\Scripts\\PackageLicenses\\PackageFilter_EmaServices.json --url-mapping C:\\Users\\u24l53\\source\\repos\\PowerShellTools\\Scripts\\PackageLicenses\\UrlMapping.json"
     },
     "WSL": {
       "commandName": "WSL2",

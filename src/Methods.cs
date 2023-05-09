@@ -1049,6 +1049,70 @@ namespace NugetUtility
             return result;
         }
 
+        public List<LibraryInfo> ApplyUrlMappings(List<LibraryInfo> libraries)
+        {
+            List<LibraryInfo> result = libraries;
+
+            foreach (var library in libraries)
+            {
+                var resolvedMapping = GetMapping(library);
+
+                if (resolvedMapping == null)
+                    continue;
+
+                library.PackageName = string.IsNullOrWhiteSpace(resolvedMapping.PackageName) ? library.PackageName : resolvedMapping.PackageName;
+                library.LicenseType = string.IsNullOrWhiteSpace(resolvedMapping.LicenseType) ? library.LicenseType : resolvedMapping.LicenseType;
+                library.PackageUrl = string.IsNullOrWhiteSpace(resolvedMapping.ProjectUrl) ? library.PackageUrl : ResolveUrlPattern(resolvedMapping.ProjectUrl, library, resolvedMapping);
+                library.SourceUrl = string.IsNullOrWhiteSpace(resolvedMapping.SourceUrl) ? library.SourceUrl : ResolveUrlPattern(resolvedMapping.SourceUrl, library, resolvedMapping);
+                library.LicenseUrl = string.IsNullOrWhiteSpace(resolvedMapping.LicenseUrl) ? library.LicenseUrl : ResolveUrlPattern(resolvedMapping.LicenseUrl, library, resolvedMapping);
+            }
+
+            return result;
+        }
+
+        private UrlMapping GetMapping(LibraryInfo library)
+        {
+            var mappingsWithMatchingId = GetMappingsWithMatchingId(library).ToList();
+            var mappingWithMatchingIdAndVersion = mappingsWithMatchingId.FirstOrDefault(m => m.MatchVersion != null && m.MatchVersion.Equals(library.PackageVersion));
+
+            return mappingWithMatchingIdAndVersion ?? mappingsWithMatchingId.FirstOrDefault();
+        }
+
+        private IEnumerable<UrlMapping> GetMappingsWithMatchingId(LibraryInfo library)
+        {
+            foreach (var mapping in _packageOptions.UrlMappingConfig.UrlMappings)
+            {
+                // Jetbrains.* -> Check for string StartsWith
+                // *Jetbrains* -> Check for string Contains
+                var asteriskCount = mapping.MatchId.Count(c => c == '*');
+
+                if ((asteriskCount == 1 && library.PackageName.StartsWith(mapping.MatchId.Replace("*", ""), StringComparison.OrdinalIgnoreCase)) ||
+                    (asteriskCount == 2 && library.PackageName.Contains(mapping.MatchId.Replace("*", ""), StringComparison.OrdinalIgnoreCase)) ||
+                    string.Equals(mapping.MatchId, library.PackageName, StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return mapping;
+                }
+            }
+        }
+
+        private string ResolveUrlPattern(string patternName, LibraryInfo library, UrlMapping mapping)
+        {
+            var pattern = _packageOptions.UrlMappingConfig.UrlPatterns.FirstOrDefault(p =>
+                string.Equals(p.Name, patternName, StringComparison.OrdinalIgnoreCase))?.Pattern;
+
+            if (pattern == null)
+                return patternName;
+
+            var resolvedUrl = pattern
+                .Replace("#id", library.PackageName)
+                .Replace("#space", mapping.Space)
+                .Replace("#repo", mapping.Repository)
+                .Replace("#version", library.PackageVersion)
+                .Replace("#licensefile", mapping.LicenseFile);
+
+            return resolvedUrl;
+        }
+
         public async Task ExportLicenseTexts(List<LibraryInfo> infos)
         {
             var directory = GetExportDirectory();
@@ -1290,6 +1354,10 @@ namespace NugetUtility
 
                 sb.Append("Project: ");
                 sb.Append(lib.PackageUrl);
+                sb.AppendLine();
+
+                sb.Append("Nuget: ");
+                sb.Append(lib.SourceUrl);
                 sb.AppendLine();
 
                 sb.Append("License: ");

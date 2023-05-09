@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using CommandLine;
 using CommandLine.Text;
+using Newtonsoft.Json;
 using static NugetUtility.Utilities;
 
 namespace NugetUtility
@@ -19,10 +21,11 @@ namespace NugetUtility
         private ICollection<string> _projectFilter = new Collection<string>();
         private ICollection<string> _packagesFilter = new Collection<string>();
         private Dictionary<string, string> _customLicenseToUrlMappings = new();
+        private UrlMappingRoot _urlMappingConfig;
 
         [Option("allowed-license-types", Default = null, HelpText = "Simple json file of a text array of allowable licenses, if no file is given, all are assumed allowed. Cannot be used alongside 'forbidden-license-types'.")]
         public string AllowedLicenseTypesOption { get; set; }
-        
+
         [Option("forbidden-license-types", Default = null, HelpText = "Simple json file of a text array of forbidden licenses, if no file is given, none are assumed forbidden. Cannot be used alongside 'allowed-license-types'.")]
         public string ForbiddenLicenseTypesOption { get; set; }
 
@@ -55,6 +58,9 @@ namespace NugetUtility
 
         [Option("packages-filter", Default = null, HelpText = "Simple json file of a text array of packages to skip, or a regular expression defined between two forward slashes or two hashes.")]
         public string PackagesFilterOption { get; set; }
+
+        [Option("url-mapping", Default = null, HelpText = "json file that allows specifying url patterns etc. for postprocessing of package data")]
+        public string UrlMappingOption { get; set; }
 
         [Option('u', "unique", Default = false, HelpText = "Unique licenses list by Id/Version")]
         public bool UniqueOnly { get; set; }
@@ -219,6 +225,16 @@ namespace NugetUtility
                 if (_customLicenseToUrlMappings.Any()) { return _customLicenseToUrlMappings; }
 
                 return _customLicenseToUrlMappings = ReadDictionaryFromFile(LicenseToUrlMappingsOption, LicenseToUrlMappings.Default);
+            }
+        }
+
+        public UrlMappingRoot UrlMappingConfig
+        {
+            get
+            {
+                if (_urlMappingConfig != null) { return _urlMappingConfig; }
+
+                return _urlMappingConfig = JsonConvert.DeserializeObject<UrlMappingRoot>(File.ReadAllText(UrlMappingOption));
             }
         }
     }
